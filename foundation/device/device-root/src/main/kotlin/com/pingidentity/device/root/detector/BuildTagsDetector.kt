@@ -54,8 +54,15 @@ class BuildTagsDetector(
      * @return `1.0` if "test-keys" is found, `0.0` otherwise
      */
     override suspend fun analyze(context: Context): Double {
+        logger.i("Running BuildTagsDetector")
         val buildTags = androidBuildTagProvider.getBuildTags()
-        return if (buildTags?.contains(TEST_KEYS) == true) 1.0 else 0.0
+        return if (buildTags?.contains(TEST_KEYS) == true) {
+            logger.w("Build tags indicate tampering: $buildTags")
+            1.0
+        } else {
+            logger.d("No tampering detected")
+            0.0
+        }
     }
 }
 

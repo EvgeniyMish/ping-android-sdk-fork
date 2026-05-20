@@ -86,6 +86,9 @@ dependencies {
     implementation(project(":mfa:oath"))
     implementation(project(":mfa:push"))
 
+    // PingOne MFA
+    implementation(project(":pingonemfa"))
+
     //Application Pin
     implementation(libs.bcpkix.jdk18on)
 

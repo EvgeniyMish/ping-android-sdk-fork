@@ -66,6 +66,14 @@
             android:name=".authenticator.notification.NotificationActionReceiver"
             android:exported="false" />
 
+        <receiver android:name=".pingonemfa.notification.PingOneNotificationActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.pingidentity.pingsampleapp.PINGONE_ACTION_APPROVE" />
+                <action android:name="com.pingidentity.pingsampleapp.PINGONE_ACTION_DENY" />
+            </intent-filter>
+        </receiver>
+
         <!-- Biometric Prompt Activity -->
         <activity
             android:name=".authenticator.notification.BiometricPromptActivity"
@@ -81,6 +89,16 @@
         <!-- Push Notification Activity -->
         <activity
             android:name=".authenticator.notification.PushNotificationActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Ping"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
+
+        <!-- PingOne MFA Push Notification Activity -->
+        <activity
+            android:name=".pingonemfa.notification.PingOnePushNotificationActivity"
             android:exported="false"
             android:theme="@style/Theme.Ping"
             android:launchMode="singleTask"

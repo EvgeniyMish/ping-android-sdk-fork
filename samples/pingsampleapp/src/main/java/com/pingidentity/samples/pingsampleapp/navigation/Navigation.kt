@@ -55,6 +55,10 @@ import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagement
 import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagementViewModel
 import com.pingidentity.samples.pingsampleapp.devtools.DeviceInfo
 import com.pingidentity.samples.pingsampleapp.home.HomeApp
+import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOneMFAAccountsScreen
+import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOneOTPScreen
+import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOnePayloadScreen
+import com.pingidentity.samples.pingsampleapp.pingonemfa.ui.PingOneQrScannerScreen
 import com.pingidentity.samples.pingsampleapp.journey.JourneyScreen
 import com.pingidentity.samples.pingsampleapp.journey.JourneyRoute
 import com.pingidentity.samples.pingsampleapp.journey.JourneyViewModel
@@ -96,6 +100,10 @@ object Route {
     const val ROUTE_AUTH_APP_ACCOUNT = "account/{issuer}/{accountName}"
     fun routeForAuthAppAccount(accountName: String) = "account/$accountName"
     const val ROUTE_AUTH_TEST_APP = "route_auth_test_app"
+    const val ROUTE_PINGONE_ACCOUNTS = "pingone_accounts"
+    const val ROUTE_PINGONE_OTP = "pingone_otp"
+    const val ROUTE_PINGONE_PAYLOAD = "pingone_payload"
+    const val ROUTE_PINGONE_QR_SCANNER = "pingone_qr_scanner"
 
 }
 
@@ -170,6 +178,18 @@ fun AppNavigation(
                 onAuthTestScreenClick = {
                     navController.navigate(Route.ROUTE_AUTH_TEST_APP)
                 },
+                onPingOneAccountsClick = {
+                    navController.navigate(Route.ROUTE_PINGONE_ACCOUNTS)
+                },
+                onPingOneOTPClick = {
+                    navController.navigate(Route.ROUTE_PINGONE_OTP)
+                },
+                onPingOnePayloadClick = {
+                    navController.navigate(Route.ROUTE_PINGONE_PAYLOAD)
+                },
+                onPingOneQrScannerClick = {
+                    navController.navigate(Route.ROUTE_PINGONE_QR_SCANNER)
+                }
             )
         }
         
@@ -492,6 +512,32 @@ fun AppNavigation(
                     navController.popBackStack()
                 }
             }
+        }
+
+        composable(Route.ROUTE_PINGONE_ACCOUNTS) {
+            PingOneMFAAccountsScreen(
+                onBack = { navController.popBackStack() },
+                onScanQr = { navController.navigate(Route.ROUTE_PINGONE_QR_SCANNER) }
+            )
+        }
+
+        composable(Route.ROUTE_PINGONE_OTP) {
+            PingOneOTPScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Route.ROUTE_PINGONE_PAYLOAD) {
+            PingOnePayloadScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Route.ROUTE_PINGONE_QR_SCANNER) {
+            PingOneQrScannerScreen(
+                onBack = { navController.popBackStack() },
+                onPairComplete = { navController.popBackStack() }
+            )
         }
     }
 }

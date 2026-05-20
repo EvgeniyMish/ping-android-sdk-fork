@@ -34,6 +34,17 @@ The Ping Sample App is a consolidated sample that brings together functionality 
   - Challenge verification
 - **QR Scanner**: Integrated camera-based QR code scanning
 
+### 🔒 PingOne MFA
+- **QR Code Registration**: Scan a QR code to pair the device with PingOne MFA
+- **MFA Accounts**: View all paired PingOne MFA accounts
+- **One-Time Passcode**: Display the current OTP code with a live countdown
+- **Mobile Payload**: Generate a mobile payload for server-side authentication flows
+- **Push Notifications**: Full foreground and background push authentication handling
+  - DEFAULT: approve or deny with a single tap
+  - CHALLENGE: number-matching with server-provided options or free-form digit entry
+  - DRY: silent test push with automatic dismissal
+  - Cancellation: server-revoked requests are dismissed automatically on all surfaces
+
 ### 🛠️ Developer Tools
 - **Configuration**: Environment selection (Staging/Snapshot) with custom URL support
 - **Device Information**: Comprehensive device data collection and display
@@ -50,6 +61,7 @@ PingSampleApp
 ├── Authentication Flows (Journey, DaVinci, OIDC)
 ├── User Management (Profile, Token, Device, Logout)
 ├── MFA Features (OATH, Push, QR Scanner)
+├── PingOne MFA (Pairing, OTP, Push, Payload)
 ├── Developer Tools (Config, Device Info, Logger)
 └── Shared Components (Navigation, Theme, Config)
 ```
@@ -58,10 +70,10 @@ PingSampleApp
 
 #### 1. **PingSampleApplication**
 Application-level initialization and dependency management:
-- Initializes SDK clients (OATH, Push)
+- Initializes SDK clients (OATH, Push, PingOne MFA)
 - Creates and manages managers (OathManager, PushManager, JourneyManager)
 - Provides application-scoped AuthenticatorViewModel
-- Handles Firebase Cloud Messaging setup
+- Handles Firebase Cloud Messaging setup and token registration for both MFA modules
 
 #### 2. **Navigation System**
 Centralized navigation with proper screen routing:
@@ -76,6 +88,13 @@ Complete MFA functionality integrated from AuthenticatorApp:
 - **UI Screens**: AccountsScreen, PushNotificationsScreen, QrScannerScreen, and more
 - **Services**: PushNotificationService, LocationService
 - **Notification Handlers**: BiometricPromptActivity, NotificationActionReceiver
+
+#### 4. **PingOne MFA Integration**
+Direct integration of the `pingonemfa` module for PingOne push and OTP:
+- **ViewModel**: PingOneMFAViewModel — manages pairing, OTP countdown, payload, and account state
+- **UI Screens**: PingOneQrScannerScreen, PingOneMFAAccountsScreen, PingOneOTPScreen, PingOnePayloadScreen, PingOnePushNotificationScreen
+- **Notification**: PingOneNotificationHelper, PingOneNotificationActionReceiver, PingOnePushNotificationActivity
+- **Store**: PushNotificationStore — single-slot in-process store for the active push notification
 
 #### 4. **Device Management**
 Comprehensive device registration and management:
@@ -214,6 +233,12 @@ fun logoutAll() {
 - Push
 - Push Notifications
 
+**PINGONE MFA**
+- QR Code Registration
+- MFA Accounts
+- One-Time Passcode
+- Mobile Payload
+
 **DEVELOPER TOOLS**
 - Configuration
 - Device Information
@@ -222,7 +247,7 @@ fun logoutAll() {
 ## Dependencies
 
 Key dependencies include:
-- Ping Identity SDK modules (Journey, DaVinci, OIDC, MFA)
+- Ping Identity SDK modules (Journey, DaVinci, OIDC, MFA, PingOne MFA)
 - Jetpack Compose for UI
 - Navigation Component
 - Firebase Cloud Messaging
@@ -268,7 +293,9 @@ com.pingidentity.samples.pingsampleapp
 │   ├── managers/              # Business logic managers
 │   ├── ui/                    # Authenticator screens
 │   ├── notification/          # Push notification handlers
-│   └── service/               # Background services
+│   └── service/               # Background services (PushNotificationService)
+├── pingonemfa/                 # PingOne MFA integration
+│   └── notification/          # Push management
 ├── config/                    # Environment configuration
 ├── davinci/                   # DaVinci flow screens
 ├── devicemanagement/          # Device registration/management

@@ -76,11 +76,14 @@ abstract class CommandDetector : TamperDetector {
      *         - `0.0` indicates no suspicious commands were found
      */
     override suspend fun analyze(context: Context): Double {
+        logger.i("Running CommandDetector")
         for (command in getCommands()) {
             if (exists(command)) {
+                logger.w("Command: $command found.")
                 return 1.0
             }
         }
+        logger.d("No suspicious commands found.")
         return 0.0
     }
 

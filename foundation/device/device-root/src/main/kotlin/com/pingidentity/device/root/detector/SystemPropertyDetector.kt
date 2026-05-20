@@ -48,9 +48,12 @@ abstract class SystemPropertyDetector : TamperDetector {
      * @return `true` if any suspicious system properties are detected, `false` otherwise
      */
     override suspend fun analyze(context: Context): Double {
+        logger.i("Running SystemPropertyDetector")
         return if (exists(getProperties())) {
+            logger.w("Suspicious system properties found")
             1.0
         } else {
+            logger.d("Suspicious system properties not found")
             0.0
         }
     }
@@ -60,16 +63,22 @@ abstract class SystemPropertyDetector : TamperDetector {
      *
      * This method searches through all system properties to find matches for the
      * key-value pairs provided in the properties map. The format expected is
-     * `[key]: [value]` as returned by the `getprop` command.
+     * `[Map.keys]: [Map.values]` as returned by the `getprop` command.
      *
      * @param properties A map of property names to their suspicious values
      * @return `true` if any matching property-value pair is found, `false` otherwise
      */
     internal fun exists(properties: Map<String, String>): Boolean {
-        for (line in propsReader()) {
-            for (entry in properties.entries.toSet()) {
-                return (line.contains(entry.key) &&
-                        line.contains("[${entry.value}]"))
+        val systemPropertyList = propsReader()
+        systemPropertyList.forEach { property ->
+            for (entry in properties.entries) {
+                // Property format is "[key]: [value]"
+                val expectedProperty = "[${entry.key}]: [${entry.value}]"
+                logger.d("Checking property: $property against expected: $expectedProperty")
+                if (property == expectedProperty) {
+                    logger.w("Suspicious property found: $property")
+                    return true
+                }
             }
         }
         return false
@@ -80,7 +89,7 @@ abstract class SystemPropertyDetector : TamperDetector {
      *
      * This method executes the Android `getprop` command to retrieve all system
      * properties and returns them as a list of strings. Each string represents
-     * one property in the format `[key]: [value]`.
+     * one property in the format `[Map.keys]: [Map.values]`.
      *
      * @return A list of property strings, or an empty list if reading fails
      */

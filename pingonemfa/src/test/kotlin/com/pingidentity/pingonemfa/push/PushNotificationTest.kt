@@ -4,6 +4,7 @@ import android.content.Context
 import com.pingidentity.pingidsdkv2.NotificationObject
 import com.pingidentity.pingidsdkv2.PingOne
 import com.pingidentity.pingidsdkv2.PingOneSDKError
+import com.pingidentity.pingidsdkv2.types.DenyReason
 import com.pingidentity.pingonemfa.commons.PingOneMFAException
 import io.mockk.every
 import io.mockk.mockk
@@ -22,8 +23,8 @@ class PushNotificationTest {
         every {
             notificationObject.approve(any(), any(), any(), any())
         } answers {
-            val callback = arg<PingOne.PingOneSDKCallback>(3)
-            callback.onComplete(null)
+            val callback = arg<PingOne.PingOneMobileConfirmationCallback>(3)
+            callback.onComplete(null, null)
         }
 
         val push = PushNotification(
@@ -42,8 +43,8 @@ class PushNotificationTest {
         every {
             notificationObject.approve(any(), any(), any(), any())
         } answers {
-            val callback = arg<PingOne.PingOneSDKCallback>(3)
-            callback.onComplete(PingOneSDKError(1003, "mock"))
+            val callback = arg<PingOne.PingOneMobileConfirmationCallback>(3)
+            callback.onComplete(null, PingOneSDKError(1003, "mock"))
         }
         val push = PushNotification(
             notificationObject = notificationObject,
@@ -52,8 +53,9 @@ class PushNotificationTest {
         )
         val result = push.approveNotification(context, "banner")
         assertTrue(result.isFailure)
+        // Known SDK failure: message contains the formatted SDK code
         assertTrue { result.exceptionOrNull() is PingOneMFAException }
-        assertTrue { result.exceptionOrNull()?.message == "mock" }
+        assertTrue { result.exceptionOrNull()!!.message!!.contains("1003") }
     }
     @Test
     fun `approveNotification returns failure when exception is thrown`() = runTest {
@@ -77,9 +79,9 @@ class PushNotificationTest {
     @Test
     fun `denyNotification returns success when callback error is null`() = runTest {
         every {
-            notificationObject.deny(any(), any())
+            notificationObject.deny(any(), DenyReason.NONE, any())
         } answers {
-            val callback = arg<PingOne.PingOneSDKCallback>(1)
+            val callback = arg<PingOne.PingOneSDKCallback>(2)
             callback.onComplete(null)
         }
         val push = PushNotification(
@@ -94,9 +96,9 @@ class PushNotificationTest {
     @Test
     fun `denyNotification returns error when callback error is not null`() = runTest {
         every {
-            notificationObject.deny(any(), any())
+            notificationObject.deny(any(), DenyReason.NONE, any())
         } answers {
-            val callback = arg<PingOne.PingOneSDKCallback>(1)
+            val callback = arg<PingOne.PingOneSDKCallback>(2)
             callback.onComplete(PingOneSDKError(1003, "mock"))
         }
         val push = PushNotification(
@@ -106,14 +108,15 @@ class PushNotificationTest {
         )
         val result = push.denyNotification(context)
         assertTrue(result.isFailure)
+        // Known SDK failure: message contains the formatted SDK code
         assertTrue { result.exceptionOrNull() is PingOneMFAException }
-        assertTrue { result.exceptionOrNull()?.message == "mock" }
+        assertTrue { result.exceptionOrNull()!!.message!!.contains("1003") }
     }
 
     @Test
     fun `denyNotification returns failure when exception is thrown`() = runTest {
         every {
-            notificationObject.deny(any(), any())
+            notificationObject.deny(any(), DenyReason.NONE, any())
         } throws RuntimeException("Simulated Network Error")
 
         val push = PushNotification(
@@ -125,51 +128,6 @@ class PushNotificationTest {
         assertTrue(result.isFailure)
         assertTrue { result.exceptionOrNull() is Exception }
         assertTrue { result.exceptionOrNull()?.message == "Simulated Network Error" }
-    }
-
-    @Test
-    fun `requiresBiometric returns true when notificationObject numberMatchingType is null`() {
-        every { notificationObject.numberMatchingType } returns null
-        val push = PushNotification(
-            notificationObject = notificationObject,
-            title = "t",
-            message = "m"
-            )
-        assertTrue(push.requiresBiometric())
-    }
-
-    @Test
-    fun `requiresBiometric returns false when notificationObject numberMatchingType is not null`() {
-        every { notificationObject.numberMatchingType } returns "mock"
-        val push = PushNotification(
-            notificationObject = notificationObject,
-            title = "t",
-            message = "m"
-            )
-        assertTrue(!push.requiresBiometric())
-    }
-
-    @Test
-    fun `isChallenge returns true when notificationObject numberMatchingType is not null`() {
-        every { notificationObject.numberMatchingType } returns "mock"
-        val push = PushNotification(
-            notificationObject = notificationObject,
-            title = "t",
-            message = "m"
-        )
-        assertTrue(push.isChallenge())
-    }
-
-    @Test
-    fun `isChallenge returns false when notificationObject numberMatchingType is null`(){
-        every { notificationObject.numberMatchingType } returns null
-        val push = PushNotification(
-            notificationObject = notificationObject,
-            title = "t",
-            message = "m"
-        )
-        assertTrue(!push.isChallenge())
-
     }
 
     @Test
@@ -232,5 +190,31 @@ class PushNotificationTest {
         )
 
         assertEquals(PushType.DEFAULT, push.getPushType())
+    }
+
+    @Test
+    fun `isCancelAuthentication returns true when notificationObject isCancelAuth is true`() {
+        every { notificationObject.isCancelAuth } returns true
+
+        val push = PushNotification(
+            notificationObject = notificationObject,
+            title = null,
+            message = null
+        )
+
+        assertTrue(push.isCancelAuthentication())
+    }
+
+    @Test
+    fun `isCancelAuthentication returns false when notificationObject isCancelAuth is false`() {
+        every { notificationObject.isCancelAuth } returns false
+
+        val push = PushNotification(
+            notificationObject = notificationObject,
+            title = null,
+            message = null
+        )
+
+        assertTrue(!push.isCancelAuthentication())
     }
 }

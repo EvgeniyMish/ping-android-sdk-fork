@@ -54,7 +54,7 @@ coilCompose = "2.7.0"
 startupRuntime = "1.2.0"
 
 com-pingidentity-signals = "5.2.0"
-com-pingidentity-pingonemfa = "2.2.0"
+com-pingidentity-pingonemfa = "2.3.0"
 kotlin-playservices-coroutine = "1.10.2"
 
 barcodeScanning = "17.3.0"

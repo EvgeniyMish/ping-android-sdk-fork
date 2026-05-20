@@ -6,6 +6,7 @@
 
 package com.pingidentity.device.root.detector
 
+import android.content.Context
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.WARN
 
@@ -78,4 +79,9 @@ object BusyBoxProgramFileDetector : FileDetector() {
      * Detector name key used for identification and logging purposes.
      */
     internal const val BUSYBOX_PROGRAM_FILE_DETECTOR_NAME = "busybox"
+
+    override suspend fun analyze(context: Context): Double {
+        logger.i("Running BusyBoxProgramFileDetector")
+        return super.analyze(context)
+    }
 }

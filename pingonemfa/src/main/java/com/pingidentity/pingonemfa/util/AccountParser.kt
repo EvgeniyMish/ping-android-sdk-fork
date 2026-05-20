@@ -27,6 +27,7 @@ internal class AccountParser(
                     id = it.id.orEmpty(),
                     environment = it.environment?.id.orEmpty(),
                     deviceId = it.device?.id.orEmpty(),
+                    username = it.username,
                     name = it.name?.given.orEmpty(),
                     family = it.name?.family.orEmpty()
                 )
@@ -45,6 +46,7 @@ internal data class UserDto(
     val id: String? = null,
     val environment: IdContainer? = null,
     val device: IdContainer? = null,
+    val username: String,
     val name: NameDto? = null
 )
 

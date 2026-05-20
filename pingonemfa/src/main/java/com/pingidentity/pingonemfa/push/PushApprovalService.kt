@@ -17,10 +17,12 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.pingidentity.logger.Logger
+import com.pingidentity.pingidsdkv2.types.DenyReason
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
@@ -31,7 +33,7 @@ import kotlin.coroutines.resumeWithException
  * Android does NOT allow network calls in the background (from notification actions in particular).
  */
 internal class PushApprovalService(
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
+    dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : Service(){
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
@@ -101,7 +103,7 @@ internal class PushApprovalService(
                 this,
                 auth,
                 null
-            ) { error ->
+            ) { _, error ->
                 if (!cont.isActive) return@approve
                 if (error == null) cont.resume(Unit)
                 else cont.resumeWithException(Exception(error.message ?: "Approval failed"))
@@ -115,7 +117,9 @@ internal class PushApprovalService(
     ) = suspendCancellableCoroutine { cont ->
         try {
             notification.notificationObject.deny(
-                this){ error ->
+                this,
+                DenyReason.NONE
+            ){ error ->
                 if (!cont.isActive) return@deny
                 if (error == null) cont.resume(Unit)
                 else cont.resumeWithException(Exception(error.message ?: "Deny action failed"))
@@ -129,4 +133,18 @@ internal class PushApprovalService(
         private const val NOTIFICATION_ID = 7001
     }
 
+    /*
+     * Cancel the coroutine scope when Android destroys the service.
+     *
+     * Without this, the SupervisorJob stays alive after onDestroy() is called:
+     * any in-flight approve/deny network call would keep running against a dead
+     * service instance, holding a reference to it and leaking memory until the
+     * coroutine eventually completes or is garbage-collected. Cancelling here
+     * ensures all child coroutines are interrupted immediately and the scope
+     * cannot launch new work after the service is gone.
+     */
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
+    }
 }

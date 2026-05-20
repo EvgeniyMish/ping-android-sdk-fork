@@ -6,6 +6,7 @@
 
 package com.pingidentity.device.root.detector
 
+import android.content.Context
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.WARN
 
@@ -113,4 +114,9 @@ object RootAppDetector: PackageDetector() {
         "com.zhiqupk.root.global",
         "com.alephzain.framaroot",
     )
+
+    override suspend fun analyze(context: Context): Double {
+        logger.i("Running RootAppDetector")
+        return super.analyze(context)
+    }
 }

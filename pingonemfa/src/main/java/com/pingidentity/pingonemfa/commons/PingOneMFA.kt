@@ -13,7 +13,6 @@ import com.google.firebase.messaging.RemoteMessage
 import com.pingidentity.android.ContextProvider
 import com.pingidentity.logger.Logger
 import com.pingidentity.pingidsdkv2.PingOne
-import com.pingidentity.pingidsdkv2.PingOneGeo
 import com.pingidentity.pingidsdkv2.types.NotificationProvider
 import com.pingidentity.pingonemfa.otp.OtpCodeInfo
 import com.pingidentity.pingonemfa.push.PushApprovalService
@@ -30,13 +29,37 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.coroutines.resume
 
+/**
+ * Entry point for all PingOne MFA operations.
+ *
+ * This is a singleton that wraps the native PingOne MFA SDK (`pingidsdkv2`) behind a
+ * coroutine-friendly API. All native callback-based operations are bridged to `suspend`
+ * functions that return [Result] — callers never need a try/catch.
+ *
+ * ## Lifecycle
+ * Call [initialize] once at application startup before invoking any other function.
+ * The call is guarded by a mutex and is idempotent — repeated calls after a successful
+ * initialization return [Result.success] immediately.
+ *
+ * ## Error handling
+ * All `suspend` functions return [Result.failure] wrapping a [PingOneMFAException] on error.
+ * The native [com.pingidentity.pingidsdkv2.PingOneSDKError] type is never exposed.
+ */
 object PingOneMFA {
     private val logger: Logger = Logger.logger
+    @Volatile
     private var isInitialized: Boolean = false
-    private var lock = Mutex()
+    private val lock = Mutex()
 
-    //SDK must be initialized once and cannot handle parallel configure calls
-    suspend fun initialize(): Result<Unit> = lock.withLock {
+    /**
+     * Configures the PingOne MFA SDK for the given service [geo] region.
+     *
+     * Must be called once at application startup before any other [PingOneMFA] call.
+     * Subsequent calls after a successful initialization return [Result.success] immediately
+     * without re-entering the native SDK. The call is mutex-guarded so parallel invocations
+     * are safe — only one configure call will reach the native SDK.
+     */
+    suspend fun initialize(geo: Geo): Result<Unit> = lock.withLock {
         if (isInitialized) {
             return Result.success(Unit)
         }
@@ -44,13 +67,12 @@ object PingOneMFA {
             try {
                 PingOne.configure(
                     ContextProvider.context,
-                    // for demonstration purposes we simply hardcode the North America geo
-                    PingOneGeo.NORTH_AMERICA
+                    geo.toPingOneGeo()
                 ) { error ->
                     continuation.resume(
                         error?.let {
                             logger.e("PingOne initialization failed: ${it.userInfo}")
-                            Result.failure(PingOneMFAException(it.message))
+                            Result.failure(PingOneMFAException(it))
                         } ?: run {
                             isInitialized = true
                             Result.success(Unit)
@@ -59,15 +81,18 @@ object PingOneMFA {
                 }
             }catch (e: Exception){
                 logger.e("PingOne initialization failed", e)
-                continuation.resume(Result.failure(PingOneMFAException(e.message)))
+                continuation.resume(Result.failure(PingOneMFAException(e)))
             }
         }
     }
 
-    /*
-     * Registers push token with PingOne. Should be called each time the token is refreshed.
+    /**
+     * Registers or refreshes the FCM push [pushToken] with PingOne.
+     *
+     * Should be called each time Firebase delivers a new token via
+     * `FirebaseMessagingService.onNewToken`, and immediately after [initialize] succeeds.
      */
-    suspend fun register(pushToken: String) : Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun setDeviceToken(pushToken: String) : Result<Unit> = withContext(Dispatchers.IO) {
         suspendCancellableCoroutine { continuation ->
             try {
                 PingOne.setDeviceToken(
@@ -80,7 +105,7 @@ object PingOneMFA {
                             ?.firstOrNull { it != null }
                             ?.let { err ->
                                 logger.e("PingOne push token registration failed: ${err.userInfo}")
-                                Result.failure(PingOneMFAException(err.message))
+                                Result.failure(PingOneMFAException(err))
                             }
                             ?: Result.success(Unit)
 
@@ -89,13 +114,16 @@ object PingOneMFA {
                 }
             } catch (e : Exception) {
                 logger.e("PingOne push token registration failed", e)
-                continuation.resume(Result.failure(PingOneMFAException(e.message)))
+                continuation.resume(Result.failure(PingOneMFAException(e)))
             }
         }
     }
 
-    /*
-     * Starts pairing process with PingOne.
+    /**
+     * Pairs the device with a PingOne MFA account using [pairingKey].
+     *
+     * The pairing key is typically obtained by scanning a QR code or from a DaVinci flow.
+     * On success, the account becomes available via [getDeviceInfo].
      */
     suspend fun pair(pairingKey: String): Result<Unit> = suspendCancellableCoroutine { continuation ->
         try {
@@ -105,68 +133,96 @@ object PingOneMFA {
             ) { _, error ->
                 val result = error?.let { err ->
                     logger.e("PingOne pairing failed: ${err.userInfo}")
-                    Result.failure(PingOneMFAException(err.message))
+                    Result.failure(PingOneMFAException(err))
                 } ?: Result.success(Unit)
                 continuation.resume(result)
             }
         } catch (e: Exception) {
             logger.e("PingOne pairing failed", e)
-            continuation.resume(Result.failure(PingOneMFAException(e.message)))
+            continuation.resume(Result.failure(PingOneMFAException(e)))
         }
     }
 
-    /*
-     * Retrieves all paired accounts from PingOne
+    /**
+     * Returns metadata for all currently paired PingOne MFA accounts.
+     * Accounts are mapped into [PingOneMfaAccount] wrapper types.
      */
-    suspend fun getAccounts(): Result<List<PingOneMfaAccount>> =
+    suspend fun getDeviceInfo(): Result<List<PingOneMfaAccount>> =
         suspendCancellableCoroutine { continuation ->
             try {
                 PingOne.getInfo(
                     ContextProvider.context
                 ) { deviceInfo, errors ->
-                    val result = deviceInfo?.let {
-                        Result.success(AccountParser().parseAccounts(it.toString()))
-                    }?: run {
-                        logger.e("PingOne getAccounts failed: ${errors.firstOrNull()?.userInfo}")
-                        Result.failure(PingOneMFAException(errors.firstOrNull()?.message))
+                    /*
+                     * Check errors first: if the SDK signaled a problem and deviceInfo is null or empty,
+                     * treat the call as failed.
+                     */
+                    val error = errors.firstOrNull { it != null }
+                    val result = if (error != null && (deviceInfo == null || deviceInfo.isEmpty)) {
+                        logger.e("PingOne getDeviceInfo failed: ${error.userInfo}")
+                        Result.failure(PingOneMFAException(error))
+                    } else if (deviceInfo != null) {
+                        Result.success(AccountParser().parseAccounts(deviceInfo.toString()))
+                    } else {
+                        // Neither errors nor deviceInfo — SDK misbehaved; avoid hanging the coroutine.
+                        logger.e("PingOne getDeviceInfo failed: no data and no error")
+                        Result.failure(PingOneMFAException(Exception("getDeviceInfo failed: no error details provided")))
                     }
                     continuation.resume(result)
                 }
             }catch (e: Exception){
-                logger.e("PingOne getAccounts failed", e)
-                continuation.resume(Result.failure(PingOneMFAException(e.message)))
+                logger.e("PingOne getDeviceInfo failed", e)
+                continuation.resume(Result.failure(PingOneMFAException(e)))
             }
         }
 
-    /*
-     * Retrieves OTP code from PingOne.
+    /**
+     * Returns the current one-time passcode and its remaining validity window.
+     *
+     * [OtpCodeInfo.secondsRemaining] is a snapshot at call time, clamped to `0` if already
+     * expired. Re-call this function when the countdown reaches zero to receive the next code.
      */
-    suspend fun collectOtp(): Result<OtpCodeInfo> = suspendCancellableCoroutine { continuation ->
+    suspend fun getOneTimePasscode(): Result<OtpCodeInfo> = suspendCancellableCoroutine { continuation ->
         try {
             PingOne.getOneTimePassCode(ContextProvider.context) { otpInfo, error ->
                 val result = otpInfo?.let {
                     Result.success(
                         OtpCodeInfo(
                             otpInfo.passcode,
-                            ((otpInfo.validUntil * 1000 - System.currentTimeMillis()) / 1000).toInt()
+                            maxOf(
+                                0,
+                                ((otpInfo.validUntil * 1000 - System.currentTimeMillis()) / 1000).toInt()
+                            )
                         )
                     )
-                }?: run {
-                    logger.e("PingOne collectOtp failed: ${error?.userInfo}")
-                    Result.failure(PingOneMFAException(error?.message))
+                } ?: run {
+                    /*
+                     * otpInfo is null but error may also be null if the SDK misbehaves;
+                     * fall back to a generic exception so the coroutine is never left hanging
+                     */
+                    logger.e("PingOne getOneTimePasscode failed: ${error?.userInfo}")
+                    Result.failure(error?.let {
+                        PingOneMFAException(it)
+                    } ?: PingOneMFAException(Exception("getOneTimePasscode failed: no error details provided"))
+                    )
                 }
                 continuation.resume(result)
             }
         } catch (e: Exception) {
-            logger.e("PingOne collectOtp failed", e)
-            continuation.resume(Result.failure(PingOneMFAException(e.message)))
+            logger.e("PingOne getOneTimePasscode failed", e)
+            continuation.resume(Result.failure(PingOneMFAException(e)))
         }
     }
 
-    /*
-     * Transforms received FCM Remote Message object from PingOne into PushNotification object
+    /**
+     * Converts an incoming FCM [message] into a typed [PushNotification].
+     *
+     * Call this from `FirebaseMessagingService.onMessageReceived` when the message data
+     * contains the `"PingOne"` key. The resulting [PushNotification] provides [PushNotification.getPushType],
+     * [PushNotification.approveNotification], [PushNotification.denyNotification], and
+     * [PushNotification.isCancelAuthentication] for the full push response lifecycle.
      */
-    suspend fun collectPush(message: RemoteMessage): Result<PushNotification> =
+    suspend fun processRemoteNotification(message: RemoteMessage): Result<PushNotification> =
         suspendCancellableCoroutine { continuation ->
             try {
                 PingOne.processRemoteNotification(
@@ -177,44 +233,72 @@ object PingOneMFA {
                         Result.success(
                             PushNotification(
                                 notificationObject = notificationObject,
+                                /*
+                                 * Parse title and message from the "aps" field in the FCM data
+                                 * payload, which contains the original FCM payload sent by PingOne.
+                                 */
                                 title = getTitleFromRemoteMessageData(message.data["aps"]),
                                 message = getBodyFromRemoteMessageData(message.data["aps"])
                             )
                         )
-                    }?: run {
-                        logger.e("PingOne collectPush failed: ${error?.userInfo}")
-                        Result.failure(PingOneMFAException(error?.message))
+                    } ?: run {
+                        /*
+                         * notificationObject is null but error may also be null if the SDK
+                         * misbehaves; fall back to a generic exception so the coroutine is
+                         * never left hanging
+                         */
+                        logger.e("PingOne processRemoteNotification failed: ${error?.userInfo}")
+                        Result.failure(error?.let {
+                            PingOneMFAException(it)
+                        } ?: PingOneMFAException(Exception("processRemoteNotification failed: no error details provided"))
+                        )
                     }
                     continuation.resume(result)
                 }
             }catch (e: Exception){
-                logger.e("PingOne collectPush failed", e)
-                continuation.resume(Result.failure(PingOneMFAException(e.message)))
+                logger.e("PingOne processRemoteNotification failed", e)
+                continuation.resume(Result.failure(PingOneMFAException(e)))
             }
         }
 
-    /*
-     * Retrieves mobile payload from PingOne.
+    /**
+     * Generates a cryptographic mobile payload string from the native PingOne MFA SDK.
+     *
+     * The payload is intended for submission to a server-side authentication flow (e.g. DaVinci).
+     * Phase 1 exposes only the raw payload string — binding it to a Collector or continuation
+     * node is the responsibility of the calling layer.
      */
-    suspend fun collectMobilePayload(): Result<String> = suspendCancellableCoroutine { continuation ->
+    suspend fun generateMobilePayload(): Result<String> = suspendCancellableCoroutine { continuation ->
         try {
             PingOne.generateMobilePayload(ContextProvider.context) { payload, error ->
                 val result = payload?.let {
                     Result.success(payload)
-                }?: run {
-                    logger.e("PingOne collectMobilePayload failed: ${error?.userInfo}")
-                    Result.failure(PingOneMFAException(error?.message))
+                } ?: run {
+                    /*
+                     * payload is null but error may also be null if the SDK misbehaves;
+                     * fall back to a generic exception so the coroutine is never left hanging
+                     */
+                    logger.e("PingOne generateMobilePayload failed: ${error?.userInfo}")
+                    Result.failure(error?.let {
+                        PingOneMFAException(it)
+                    } ?: PingOneMFAException(Exception("generateMobilePayload failed: no error details provided"))
+                    )
                 }
                 continuation.resume(result)
             }
         }catch (e: Exception){
-            logger.e("PingOne collectMobilePayload failed", e)
-            continuation.resume(Result.failure(PingOneMFAException(e.message)))
+            logger.e("PingOne generateMobilePayload failed", e)
+            continuation.resume(Result.failure(PingOneMFAException(e)))
         }
     }
 
-    /*
-     * Approves MFA push notification. Should be called from notification action if application is in the background.
+    /**
+     * Approves the push authentication request represented by [notification] when the app is in
+     * the background (e.g. the user tapped Approve on the system notification banner).
+     *
+     * Starts [PushApprovalService] as a foreground service so the network call is permitted
+     * under Android's background execution restrictions. The outcome is not surfaced back to
+     * the UI — add a custom broadcast or shared state if your app needs to react to it.
      */
     fun approvePushNotificationFromBanner(notification: PushNotification){
         val appContext = ContextProvider.context
@@ -226,8 +310,13 @@ object PingOneMFA {
         ContextCompat.startForegroundService(appContext, intent)
     }
 
-    /*
-     * Denies MFA push notification. Should be called from notification action if application is in the background.
+    /**
+     * Denies the push authentication request represented by [notification] when the app is in
+     * the background (e.g. the user tapped Deny on the system notification banner).
+     *
+     * Starts [PushApprovalService] as a foreground service so the network call is permitted
+     * under Android's background execution restrictions. The outcome is not surfaced back to
+     * the UI — add a custom broadcast or shared state if your app needs to react to it.
      */
     fun denyPushNotificationFromBanner(notification: PushNotification){
         val appContext = ContextProvider.context
@@ -258,4 +347,5 @@ object PingOneMFA {
                 ?.jsonPrimitive
                 ?.contentOrNull
         }
+
 }

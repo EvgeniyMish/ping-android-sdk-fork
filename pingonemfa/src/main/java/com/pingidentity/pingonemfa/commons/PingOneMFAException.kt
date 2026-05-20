@@ -7,16 +7,28 @@
 
 package com.pingidentity.pingonemfa.commons
 
+import com.pingidentity.pingidsdkv2.PingOneSDKError
+
 /**
- * Root exception type for all PingOne MFA SDK errors.
+ * Exception thrown by suspend variants of the PingOne MFA APIs when an operation fails.
  *
- * This exception optionally wraps an underlying cause while providing
- * a domain-specific error type for SDK consumers.
+ * The native [PingOneSDKError] type is intentionally not exposed, so hosting apps do not need
+ * a direct dependency on the `pingidsdkv2` AAR. All available error information is surfaced
+ * via the standard [message] property.
  *
- * @param message Human-readable description of the error.
- * @param cause   The original exception that triggered this failure, if any.
+ * ### Usage
+ * ```kotlin
+ * result.onFailure { e ->
+ *     Log.e("MFA", e.message)
+ * }
+ * ```
  */
-class PingOneMFAException(
-    message: String?=null,
-    cause: Throwable? = null
-) : Exception(message, cause)
+class PingOneMFAException(message: String?) : Exception(message) {
+
+    // Internal factory constructors — accept native SDK type but keep them off the public API surface entirely.
+    internal constructor(error: PingOneSDKError) : this(
+        "Code=${error.code} \"${error.message}\" UserInfo=${error.userInfo}"
+    )
+
+    internal constructor(cause: Exception) : this(cause.message ?: "Unknown error")
+}

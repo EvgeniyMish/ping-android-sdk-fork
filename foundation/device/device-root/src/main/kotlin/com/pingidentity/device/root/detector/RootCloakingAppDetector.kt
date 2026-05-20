@@ -6,6 +6,7 @@
 
 package com.pingidentity.device.root.detector
 
+import android.content.Context
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.WARN
 
@@ -112,4 +113,9 @@ object RootCloakingAppDetector : PackageDetector() {
         "com.formyhm.hiderootPremium",
         "com.formyhm.hideroot",
     )
+
+    override suspend fun analyze(context: Context): Double {
+        logger.i("Running RootCloakingAppDetector")
+        return super.analyze(context)
+    }
 }

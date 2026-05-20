@@ -6,6 +6,7 @@
 
 package com.pingidentity.device.root.detector
 
+import android.content.Context
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.WARN
 
@@ -74,5 +75,10 @@ object DangerousPropertyDetector : SystemPropertyDetector() {
             "ro.debuggable" to "1",
             "ro.secure" to "0",
         )
+    }
+
+    override suspend fun analyze(context: Context): Double {
+        logger.i("Running DangerousPropertyDetector")
+        return super.analyze(context)
     }
 }

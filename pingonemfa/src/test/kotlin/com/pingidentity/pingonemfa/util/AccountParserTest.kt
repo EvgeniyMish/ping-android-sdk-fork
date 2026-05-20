@@ -19,6 +19,7 @@ class AccountParserTest {
                   "id": "u1",
                   "environment": { "id": "env1" },
                   "device": { "id": "d1" },
+                    "username": "jdoe",
                   "name": { "given": "John", "family": "Doe" }
                 }
               ]
@@ -44,10 +45,10 @@ class AccountParserTest {
         val json = """
     {
       "NA": {
-        "users": [{ "id": "u1" }]
+        "users": [{ "id": "u1", "username": "jdoe" }]
       },
       "EU": {
-        "users": [{ "id": "u2" }]
+        "users": [{ "id": "u2", "username": "asmith" }]
       }
     }
     """.trimIndent()
@@ -77,7 +78,7 @@ class AccountParserTest {
         val json = """
     {
       "NA": {
-        "users": [{ "id": "u1" }]
+        "users": [{ "id": "u1", "username": "jdoe" }]
       }
     }
     """.trimIndent()
@@ -96,7 +97,7 @@ class AccountParserTest {
     {
       "NA": {
         "users": [
-          { "id": "u1", "name": { "given": "Alice" } }
+          { "id": "u1", "username": "jdoe", "name": { "given": "Alice" } }
         ]
       }
     }
@@ -117,7 +118,7 @@ class AccountParserTest {
           {
             "id": "u1",
             "unknown": "value",
-            "environment": { "id": "env1", "extra": "x" }
+            "username": "jdoe",  "environment": { "id": "env1", "extra": "x" }
           }
         ]
       }
@@ -132,7 +133,7 @@ class AccountParserTest {
     @Test
     fun `large payload`() {
         val users = (1..100).joinToString(",") {
-            """{ "id": "user-$it" }"""
+            """{ "id": "user-$it", "username": "user$it" }"""
         }
 
         val json = """
@@ -161,6 +162,7 @@ class AccountParserTest {
                         id = "u1",
                         environment = IdContainer("env"),
                         device = IdContainer("dev"),
+                        username = "jdoe",
                         name = NameDto("John", "Doe")
                     )
                 )

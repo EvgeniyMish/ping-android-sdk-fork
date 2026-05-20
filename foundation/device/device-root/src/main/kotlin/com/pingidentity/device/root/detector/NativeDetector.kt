@@ -81,8 +81,9 @@ class NativeDetector(override var logger: Logger = Logger.WARN) : FileDetector()
      *         - `0.0` indicates no tampering detected or native library unavailable
      */
     override suspend fun analyze(context: Context): Double {
+        logger.i("Running NativeDetector")
         if (!libraryLoaded) return 0.0
-
+        logger.d("Checking for native library file paths")
         val pathList = PATHS.flatMap { path ->
             getFilenames().map { filename ->
                 path + filename
@@ -92,7 +93,13 @@ class NativeDetector(override var logger: Logger = Logger.WARN) : FileDetector()
         val pathsAsAny = Array<Any>(pathList.size) { i -> pathList[i] }
 
         return runCatching {
-            if (exists(pathsAsAny) > 0) 1.0 else 0.0
+            if (exists(pathsAsAny) > 0) {
+                logger.w("Native library path found.")
+                1.0
+            } else {
+                logger.d("Native library path not found.")
+                0.0
+            }
         }.getOrElse { exception ->
             if (exception is UnsatisfiedLinkError) {
                 logger.e("Native library not linked, disabling NativeDetector", exception)

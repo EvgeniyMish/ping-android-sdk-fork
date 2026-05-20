@@ -13,6 +13,7 @@
     <string name="text_home_section_authentication">AUTHENTICATION</string>
     <string name="text_home_section_user_management">USER MANAGEMENT</string>
     <string name="text_home_section_mfa">MFA</string>
+    <string name="text_home_section_pingone_mfa">PINGONE MFA</string>
     <string name="text_home_section_developer_tools">DEVELOPER TOOLS</string>
 
     <!-- Authentication section -->
@@ -42,6 +43,58 @@
     <string name="text_push_notification_title">Push Notifications</string>
     <string name="text_push_notification_subtitle">View and respond push requests</string>
 
+    <!-- PingOne MFA home section labels -->
+    <string name="text_pingone_mfa_qr_scanner_title">QR Code Registration</string>
+    <string name="text_pingone_mfa_qr_scanner_subtitle">Scan QR code to pair with PingOne MFA</string>
+    <string name="text_pingone_mfa_accounts_title">MFA Accounts</string>
+    <string name="text_pingone_mfa_accounts_subtitle">View paired MFA accounts</string>
+    <string name="text_pingone_mfa_otp_title">One-Time Passcode</string>
+    <string name="text_pingone_mfa_otp_subtitle">OTP for your paired accounts</string>
+    <string name="text_pingone_mfa_payload_title">Mobile Payload</string>
+    <string name="text_pingone_mfa_payload_subtitle">Generate Mobile Payload for authentication and registration</string>
+
+    <!-- PingOne MFA screen titles -->
+    <string name="text_pingone_mfa_screen_accounts_title">PingOne MFA</string>
+    <string name="text_pingone_mfa_screen_otp_title">One-Time Passcode</string>
+    <string name="text_pingone_mfa_screen_payload_title">Mobile Payload</string>
+    <string name="text_pingone_mfa_screen_scanner_title">PingOne MFA Scanner</string>
+    <string name="text_pingone_mfa_screen_push_title">Authentication Request</string>
+
+    <!-- PingOne MFA loading states -->
+    <string name="text_pingone_mfa_loading_accounts">Loading accounts…</string>
+    <string name="text_pingone_mfa_loading_otp">Fetching OTP…</string>
+    <string name="text_pingone_mfa_loading_payload">Fetching payload…</string>
+    <string name="text_pingone_mfa_pairing">Pairing…</string>
+
+    <!-- PingOne MFA OTP screen -->
+    <string name="text_pingone_mfa_otp_no_passcode">No passcode available</string>
+    <string name="text_pingone_mfa_try_again">Try again</string>
+
+    <!-- PingOne MFA push notification screen -->
+    <string name="text_pingone_mfa_dry_push_message">This is a test push notification. No action is required.</string>
+    <string name="text_pingone_mfa_dismiss">Dismiss</string>
+    <string name="text_pingone_mfa_approval_failed">Approval failed</string>
+    <string name="text_pingone_mfa_deny_failed">Deny failed</string>
+    <string name="text_pingone_mfa_approved_title">Approved</string>
+    <string name="text_pingone_mfa_approved_message">Authentication approved successfully.</string>
+    <string name="text_pingone_mfa_denied_title">Denied</string>
+    <string name="text_pingone_mfa_denied_message">Authentication request has been denied.</string>
+
+    <!-- PingOne MFA number challenge -->
+    <string name="text_pingone_mfa_enter_number_prompt">Enter the number shown on your other device</string>
+    <string name="text_pingone_mfa_number_label">Number</string>
+    <string name="text_pingone_mfa_confirm_number">Confirm Number</string>
+    <string name="text_pingone_mfa_select_number">Select the matching number</string>
+
+    <!-- PingOne MFA QR scanner -->
+    <string name="text_pingone_mfa_scan_qr">Scan QR Code</string>
+    <string name="text_pingone_mfa_enter_pairing_key_placeholder">Enter pairing key manually</string>
+    <string name="text_pingone_mfa_pair_button">Pair</string>
+    <string name="text_pingone_mfa_grant_permission">Grant Permission</string>
+
+    <!-- PingOne MFA copy -->
+    <string name="text_pingone_mfa_copy">Copy</string>
+    
     <!-- Device Information -->
     <string name="text_device_information_title">Device Information</string>
     <string name="text_device_info_title">Device ID</string>
@@ -94,6 +147,7 @@
     <string name="account_detail_code_copied">Code copied to clipboard</string>
     <string name="error_title">Error</string>
     <string name="ok">OK</string>
+    <string name="retry">Retry</string>
     <string name="copy">Copy</string>
     <string name="new_code">New Code</string>
     <string name="generate_code">Generate Code</string>

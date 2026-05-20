@@ -91,6 +91,7 @@ object RootRequiredAppDetector : PackageDetector() {
      * @return `true` if any root-dependent applications are detected, `false` otherwise
      */
     override suspend fun analyze(context: Context): Double {
+        logger.i("Checking for root-dependent apps")
         return super.analyze(context)
     }
 
