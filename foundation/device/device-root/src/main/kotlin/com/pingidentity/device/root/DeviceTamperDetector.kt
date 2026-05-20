@@ -10,7 +10,6 @@ import com.pingidentity.android.ContextProvider
 import com.pingidentity.device.root.detector.BuildTagsDetector
 import com.pingidentity.device.root.detector.BusyBoxProgramFileDetector
 import com.pingidentity.device.root.detector.DangerousPropertyDetector
-import com.pingidentity.device.root.detector.LoggerAware
 import com.pingidentity.device.root.detector.NativeDetector
 import com.pingidentity.device.root.detector.PermissionDetector
 import com.pingidentity.device.root.detector.RootApkDetector
@@ -164,6 +163,7 @@ suspend fun analyze(
     val detectors = config.tamperDetectors
     var max = 0.0
     for (detector in detectors) {
+        config.logger.i("Running detector: ${detector::class.simpleName}")
         max = max(max, detector.analyze(ContextProvider.context))
         if (max >= 1) {
             return max

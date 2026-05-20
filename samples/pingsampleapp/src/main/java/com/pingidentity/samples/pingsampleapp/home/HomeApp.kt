@@ -112,9 +112,7 @@ fun HomeApp(
         }
         deviceStatus = try {
             val result = analyze {
-                detector {
-                    DefaultTamperDetector()
-                }
+                detector(DefaultTamperDetector())
             }
             if (result == 0.0) {
                 "✓ Secured"
@@ -333,7 +331,9 @@ fun HomeApp(
                     onClick = onConfigurationClick
                 )
 
-                Spacer(modifier = Modifier.padding(8.dp).fillMaxWidth())
+                Spacer(modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxWidth())
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -367,19 +367,25 @@ fun HomeApp(
                         )
                     }
                     HorizontalDivider(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
                         thickness = 1.dp,
                         color = colorResource(R.color.primary_dark)
                     )
                     TextButton(
                         onClick = onDeviceIdClick,
-                        modifier = Modifier.fillMaxWidth().padding(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
                     ) {
                         Text(text = deviceId)
                     }
                 }
 
-                Spacer(modifier = Modifier.padding(24.dp).fillMaxWidth())
+                Spacer(modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth())
             }
 
         }

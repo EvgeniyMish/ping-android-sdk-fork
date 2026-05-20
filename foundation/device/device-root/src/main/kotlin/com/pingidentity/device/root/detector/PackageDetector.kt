@@ -67,9 +67,10 @@ abstract class PackageDetector : TamperDetector {
         for (packageName in packages) {
             try {
                 packageManager.getPackageInfo(packageName, 0)
+                logger.w("Package found: $packageName")
                 return true
             } catch (_: PackageManager.NameNotFoundException) {
-                logger.i("Package not found: $packageName")
+                logger.d("Package not found: $packageName")
             }
         }
         return false
@@ -88,6 +89,7 @@ abstract class PackageDetector : TamperDetector {
      *         - `0.0` indicates no suspicious packages were found
      */
     override suspend fun analyze(context: Context): Double {
+        logger.i("Running PackageDetector")
         return if (exists(context, getPackages())) {
             1.0
         } else {

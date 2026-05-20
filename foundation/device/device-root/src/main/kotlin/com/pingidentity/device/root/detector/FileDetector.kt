@@ -59,9 +59,12 @@ abstract class FileDetector : TamperDetector {
      *         - `0.0` indicates no suspicious files were found
      */
     override suspend fun analyze(context: Context): Double {
+        logger.i("Running FileDetector")
         return if (getFilenames().any { exists(it) }) {
+            logger.w("Suspicious files found")
             1.0
         } else {
+            logger.d("Suspicious files not found")
             0.0
         }
     }

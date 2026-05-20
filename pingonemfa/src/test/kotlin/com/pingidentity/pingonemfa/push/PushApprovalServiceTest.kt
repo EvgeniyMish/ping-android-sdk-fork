@@ -4,11 +4,14 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.content.Intent
 import com.pingidentity.pingidsdkv2.NotificationObject
+import com.pingidentity.pingidsdkv2.PingOne
+import com.pingidentity.pingidsdkv2.types.DenyReason
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.spyk
+import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -62,6 +65,7 @@ class PushApprovalServiceTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkAll()
     }
 
     @Test
@@ -69,17 +73,21 @@ class PushApprovalServiceTest {
         every {
             notificationObject.approve(any(), any(), any(), any())
         } answers {
-            val callback = args[3]
-            callback!!
-                .javaClass
-                .getMethod("onComplete", Any::class.java)
-                .invoke(callback, null)
+            val callback = arg<PingOne.PingOneMobileConfirmationCallback>(3)
+            callback.onComplete(null, null)
         }
 
         val intent = spyk(Intent())
 
+        // Mock both overloads: the single-arg deprecated one (pre-Tiramisu) and the
+        // two-arg typed one (API 33+). onStartCommand branches on Build.VERSION.SDK_INT
+        // so only one path is exercised at runtime, but both must be stubbed so the test
+        // compiles and runs correctly regardless of which API level the host JVM reports.
         every {
             intent.getParcelableExtra<PushNotification>("notification")
+        } returns pushNotification
+        every {
+            intent.getParcelableExtra("notification", PushNotification::class.java)
         } returns pushNotification
 
         every {
@@ -94,11 +102,14 @@ class PushApprovalServiceTest {
 
         testDispatcher.scheduler.advanceUntilIdle()
 
+        // All arguments must use matchers when any() is present — mixing literals and
+        // matchers causes MockK to misinterpret null as a non-matcher and fail verification
+        // even when the call did occur with the expected values.
         verify {
             notificationObject.approve(
-                service,
-                "banner",
-                null,
+                any(),
+                eq("banner"),
+                isNull(),
                 any()
             )
         }
@@ -107,9 +118,9 @@ class PushApprovalServiceTest {
     @Test
     fun `onStartCommand denies notification when user_action is deny`() = runTest {
         every {
-            notificationObject.deny(any(), any())
+            notificationObject.deny(any(), DenyReason.NONE, any())
         } answers {
-            val callback = args[1]
+            val callback = args[2]
             callback!!
                 .javaClass
                 .getMethod("onComplete", Any::class.java)
@@ -118,8 +129,13 @@ class PushApprovalServiceTest {
 
         val intent = spyk(Intent())
 
+        // Mock both overloads: the single-arg deprecated one (pre-Tiramisu) and the
+        // two-arg typed one (API 33+). See approve test for full explanation.
         every {
             intent.getParcelableExtra<PushNotification>("notification")
+        } returns pushNotification
+        every {
+            intent.getParcelableExtra("notification", PushNotification::class.java)
         } returns pushNotification
 
         every {
@@ -136,6 +152,7 @@ class PushApprovalServiceTest {
         verify {
             notificationObject.deny(
                 service,
+                DenyReason.NONE,
                 any()
             )
         }

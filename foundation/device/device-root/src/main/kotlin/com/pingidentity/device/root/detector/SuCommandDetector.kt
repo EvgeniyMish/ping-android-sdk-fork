@@ -6,6 +6,7 @@
 
 package com.pingidentity.device.root.detector
 
+import android.content.Context
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.WARN
 
@@ -68,6 +69,11 @@ object SuCommandDetector : CommandDetector() {
      */
     override fun getCommands(): Array<String> {
         return arrayOf(SU_COMMAND)
+    }
+
+    override suspend fun analyze(context: Context): Double {
+        logger.i("Running SuCommandDetector")
+        return super.analyze(context)
     }
 
     internal const val SU_COMMAND = "su"

@@ -6,6 +6,7 @@
 
 package com.pingidentity.device.root.detector
 
+import android.content.Context
 import com.pingidentity.logger.Logger
 import com.pingidentity.logger.WARN
 
@@ -73,4 +74,9 @@ object RootProgramFileDetector : FileDetector() {
         "su",
         "magisk",
     )
+
+    override suspend fun analyze(context: Context): Double {
+        logger.i("Running RootProgramFileDetector")
+        return super.analyze(context)
+    }
 }

@@ -7,23 +7,45 @@ The Ping SDK for Android is designed for creating mobile native Apps that seamle
 It offers a range of APIs for user authentication, user device management, and accessing resources secured by PingOne.
 This SDK is support Browser, iOS and Android platforms.
 
+Please visit our [ documentation ](https://docs.pingidentity.com/sdks/latest/sdks/index.html) site for more information.
+
 # Modules
-
-    ping 
+    ping
     ├── foundation                            # Foundation module
-    │   ├── android                           # Android Common
-    │   ├── davinci-plugin                    # For module that integrated with davinci
-    │   ├── journey-plugin*                   # For module that integrated with journey
-    │   ├── logger                            # Provide Logging interface and common loggers
-    │   ├── oidc*                             # Provide OIDC interface
-    │   ├── orchestrate                       # Orchestrating authentication flow framework
-    │   ├── storage                           # Provide Storage interface
-    │   └── utils                             # Provide common utilities function
-    ├── davinci                               # Orchestrate authentication with PingOne Davinci
-    ├── journey*                              # Orchestrate authentication with Journey
-    ├── mfa*                                  # Povide MFA capabilities such as OTP, PUsh, WebAuthn
-    ├── external-idp                          # Provide Native Google, Facebook, Apple SocialLogin
-    ├── ...
-    └── ...
+    │   ├── android                           # Android common utilities
+    │   ├── browser                           # Browser launcher / Custom Tabs support
+    │   ├── davinci-plugin                    # Plugin contract for DaVinci integration
+    │   ├── device                            # Device capabilities
+    │   │   ├── device-client                 # Device client information
+    │   │   ├── device-id                     # Unique device identifier
+    │   │   ├── device-profile                # Device profile collection
+    │   │   └── device-root                   # Device root / integrity detection
+    │   ├── journey-plugin                    # Plugin contract for Journey integration
+    │   ├── logger                            # Logging interface and built-in loggers
+    │   ├── migration                         # Legacy-to-modern data migration helpers
+    │   ├── network                           # Ktor-based HTTP network layer
+    │   ├── oidc                              # OIDC / OAuth 2.0 interface
+    │   ├── orchestrate                       # Authentication flow orchestration framework
+    │   ├── storage                           # Encrypted and plain storage abstractions
+    │   ├── testrail                          # TestRail integration for test reporting
+    │   └── utils                             # Shared utility functions
+    ├── davinci                               # Orchestrate authentication with PingOne DaVinci
+    ├── external-idp                          # Native social login (Google, Facebook, Apple)
+    ├── journey                               # Orchestrate authentication with PingAM Journey
+    ├── mfa                                   # MFA capabilities
+    │   ├── auth-migration                    # Authentication data migration helpers
+    │   ├── binding                           # Device binding (biometric / PIN / none)
+    │   ├── binding-migration                 # Legacy device binding data migration
+    │   ├── binding-ui                        # Jetpack Compose UI for device binding
+    │   ├── commons                           # Shared MFA types and utilities
+    │   ├── fido                              # FIDO2 / WebAuthn
+    │   ├── oath                              # TOTP / HOTP one-time passwords
+    │   └── push                              # Push notification authentication
+    ├── protect                               # PingOne Protect fraud signals
+    ├── recaptcha-enterprise                  # reCAPTCHA Enterprise integration
+    └── samples                               # Sample applications
+        └── pingsampleapp                     # Combined Ping sample app
 
-***Note***: * Module under development and experimental
+# License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details

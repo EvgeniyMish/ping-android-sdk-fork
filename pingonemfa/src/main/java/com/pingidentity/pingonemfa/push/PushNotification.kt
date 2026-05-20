@@ -10,6 +10,7 @@ package com.pingidentity.pingonemfa.push
 import android.content.Context
 import android.os.Parcelable
 import com.pingidentity.pingidsdkv2.NotificationObject
+import com.pingidentity.pingidsdkv2.types.DenyReason
 import com.pingidentity.pingonemfa.commons.PingOneMFAException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
@@ -38,40 +39,37 @@ data class PushNotification(
                     context,
                     authenticationMethod,
                     numberChallenge
-                ) { error ->
+                ) { _, error ->
                     if (error == null) {
                         cont.resume(Result.success(Unit))
                     } else {
-                        cont.resume(Result.failure(PingOneMFAException(error.message)))
+                        cont.resume(Result.failure(PingOneMFAException(error)))
                     }
                 }
             } catch (e: Exception) {
-                cont.resume(Result.failure(PingOneMFAException(e.message)))
+                cont.resume(Result.failure(PingOneMFAException(e)))
             }
         }
 
     suspend fun denyNotification(context: Context) : Result<Unit> = suspendCancellableCoroutine { cont ->
             try {
                 notificationObject.deny(
-                    context
+                    context,
+                    DenyReason.NONE
                 ) { error ->
                     if (error == null) {
                         cont.resume(Result.success(Unit))
                     } else {
-                        cont.resume(Result.failure(PingOneMFAException(error.message)))
+                        cont.resume(Result.failure(PingOneMFAException(error)))
                     }
                 }
             } catch (e: Exception) {
-                cont.resume(Result.failure(PingOneMFAException(e.message)))
+                cont.resume(Result.failure(PingOneMFAException(e)))
             }
         }
 
-    fun requiresBiometric() : Boolean{
-        return !isChallenge()
-    }
-
-    fun isChallenge() : Boolean{
-        return notificationObject.numberMatchingType!=null
+    fun isCancelAuthentication(): Boolean {
+        return notificationObject.isCancelAuth
     }
 
     fun getNumbersChallenge(): IntArray? {
@@ -80,9 +78,9 @@ data class PushNotification(
 
     fun getPushType () : PushType {
         return when {
-            notificationObject.isTest -> PushType.DRY // TODO handle in Sample App
+            notificationObject.isTest -> PushType.DRY
             notificationObject.numberMatchingType != null -> PushType.CHALLENGE
-            else -> PushType.DEFAULT // TODO handle how to receive BIOMETRIC enforcement
+            else -> PushType.DEFAULT
         }
     }
 }

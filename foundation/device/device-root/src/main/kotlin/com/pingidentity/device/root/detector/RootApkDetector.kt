@@ -74,6 +74,7 @@ object RootApkDetector : TamperDetector {
      *         - `0.0` indicates no root APK files were found
      */
     override suspend fun analyze(context: Context): Double {
+        logger.i("Running RootApkDetector")
         return if (exists(ROOT_APK)) {
             1.0
         } else {
@@ -94,7 +95,9 @@ object RootApkDetector : TamperDetector {
     private fun exists(apks: List<String>): Boolean {
         try {
             for (apk in apks) {
+                logger.d("Checking for root APK: $apk")
                 if (File(apk).exists()) {
+                    logger.w("Root APK found: $apk")
                     return true
                 }
             }
