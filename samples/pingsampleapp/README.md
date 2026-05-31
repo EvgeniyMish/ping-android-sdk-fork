@@ -141,7 +141,7 @@ The PingOne MFA module (`pingonemfa`) requires additional one-time configuration
 1. `PingOneMFA.initialize(Geo.NORTH_AMERICA)` is called automatically at startup in `PingSampleApplication` — update the `Geo` value to match your PingOne environment's region
 2. The FCM token is registered with PingOne automatically via `PingOneMFA.setDeviceToken(token)` whenever Firebase delivers a new token
 3. See the [pingonemfa README](../pingonemfa/README.md) for the full list of supported regions and API reference
-
+4. See the [PingOne MFA documentation](https://docs.pingidentity.com/pingone/strong_authentication_mfa/p1_strong_authentication_configure_mobile_applications.html) for server-side configuration and integration details
 ## Implementation Highlights
 
 ### ViewModel Initialization

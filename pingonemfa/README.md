@@ -50,7 +50,7 @@ The `pingonemfa` module is the only component in the Orchestration SDK that impo
 
 - Android API level 24 or higher
 - Firebase Cloud Messaging configured for your application (`google-services.json` present and matching your application ID)
-- A PingOne environment with push notifications and/or MFA configured
+- A PingOne environment with push notifications and/or MFA configured, for documentation on setting up PingOne MFA, see [PingOne MFA documentation](https://docs.pingidentity.com/pingone/strong_authentication_mfa/p1_strong_authentication_configure_mobile_applications.html).
 
 ---
 
