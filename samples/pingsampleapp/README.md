@@ -96,7 +96,7 @@ Direct integration of the `pingonemfa` module for PingOne push and OTP:
 - **Notification**: PingOneNotificationHelper, PingOneNotificationActionReceiver, PingOnePushNotificationActivity
 - **Store**: PushNotificationStore — single-slot in-process store for the active push notification
 
-#### 4. **Device Management**
+#### 5. **Device Management**
 Comprehensive device registration and management:
 - Device registration with custom names
 - Device list display with platform icons
@@ -104,7 +104,7 @@ Comprehensive device registration and management:
 - Device deletion with confirmation
 - Automatic list refresh
 
-#### 5. **Token Management**
+#### 6. **Token Management**
 Access token viewing and manipulation:
 - Pretty-printed JSON display
 - Token refresh functionality
@@ -134,6 +134,13 @@ For Push notifications:
 1. Add `google-services.json` to the app directory
 2. Configure Firebase Cloud Messaging in Firebase Console
 3. Enable push notifications in device settings
+
+### PingOne MFA Setup
+
+The PingOne MFA module (`pingonemfa`) requires additional one-time configuration:
+1. `PingOneMFA.initialize(Geo.NORTH_AMERICA)` is called automatically at startup in `PingSampleApplication` — update the `Geo` value to match your PingOne environment's region
+2. The FCM token is registered with PingOne automatically via `PingOneMFA.setDeviceToken(token)` whenever Firebase delivers a new token
+3. See the [pingonemfa README](../pingonemfa/README.md) for the full list of supported regions and API reference
 
 ## Implementation Highlights
 

@@ -33,7 +33,7 @@ The `pingonemfa` module wraps the [PingOne MFA native SDK](https://github.com/pi
 │   │              pingonemfa module             │ │
 │   │         PingOneMFA (singleton object)      │ │
 │   └──────────────────────┬─────────────────────┘ │
-└──────────────────────────┼──────────────────────┘
+└──────────────────────────┼───────────────────────┘
                            │
               ┌────────────▼─────────┐
               │   PingOne MFA SDK    │
