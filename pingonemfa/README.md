@@ -11,6 +11,8 @@ The `pingonemfa` module wraps the [PingOne MFA native SDK](https://github.com/pi
 ## Features
 
 - **Device Pairing** — pair new MFA accounts by scanning a QR code or entering a pairing key manually
+- **DaVinci Mobile Pairing** — pair new MFA accounts directly from a DaVinci flow via the
+  `MOBILE_PAIRING` collector, without any manual QR code or pairing key handling
 - **Paired Accounts List** — retrieve information about all currently paired accounts
 - **OTP** — retrieve the current one-time passcode and its remaining validity window
 - **Push Notifications (foreground and background)** — approve or deny incoming authentication requests
@@ -128,6 +130,45 @@ PingOneMFA.pair(pairingKey)
         Log.e("MFA", "Pairing failed: ${e.message}")
     }
 ```
+
+### DaVinci Mobile Pairing
+
+The `pingonemfa` module transparently registers a
+[`MobilePairingCollector`](src/main/java/com/pingidentity/pingonemfa/davinci/MobilePairingCollector.kt)
+with the DaVinci engine at startup via
+[`CollectorInitializer`](src/main/java/com/pingidentity/pingonemfa/davinci/CollectorInitializer.kt)
+- no manual wiring is required. When the DaVinci server returns a node containing a `MOBILE_PAIRING` collector, the collector reads the server-provided `pairingKey`,
+calls `PingOneMFA.pair(...)`, and posts the outcome back to DaVinci in the resume envelope.
+
+Your UI drives the collector directly:
+
+```kotlin
+val mobilePairing = continueNode.collectors
+    .firstOrNull { it is MobilePairingCollector } as? MobilePairingCollector
+
+mobilePairing?.let { collector ->
+    // Suspending — call from a coroutine. Show a progress UI while pairing runs.
+    val result = collector.collect()
+    result.onSuccess { /* pairing succeeded */ }
+        .onFailure { e -> Log.e("MFA", "Pairing failed: ${e.message}") }
+    // Submit the collector's outcome (success or failure) back to the DaVinci server:
+    continueNode.next()
+}
+```
+
+If the user abandons the flow before pairing completes, call `collector.cancel()` to
+record a `USER_CANCELLED` outcome. The native SDK has no abort API, so any in-flight
+`PingOneMFA.pair(...)` call continues in the background; its result is discarded so the
+user-cancelled payload is preserved.
+
+**Resume envelope shape** posted to the DaVinci server under `formData.mobilePairing`:
+
+| Outcome | Payload |
+|---|---|
+| Success | `{ "status": "CLAIMED" }` |
+| Native failure | `{ "error": { "code": "<nativeCode>", "message": "<message>" } }` |
+| Unexpected failure | `{ "error": { "code": "INTERNAL_ERROR", "message": "<message>" } }` |
+| User cancelled | `{ "error": { "code": "USER_CANCELLED", "message": "<message>" } }` |
 
 ### Retrieve Paired Accounts
 
@@ -272,6 +313,9 @@ Structured representation of a single PingOne SDK error, exposed via `PingOneMFA
 PingOne MFA functionality is demonstrated in the [pingsampleapp](../samples/pingsampleapp) sample under the **PINGONE MFA** section of the home screen:
 
 - QR code scanning for device pairing
+- DaVinci Pairing — an end-to-end DaVinci flow that drives `MobilePairingCollector`,
+  configured through a dedicated "PingOne MFA DaVinci" card in the Configuration screen
+  so it is independent from the standard DaVinci config
 - Paired accounts list
 - OTP display with live countdown
 - Mobile payload generation screen
@@ -297,6 +341,21 @@ See the [pingsampleapp README](../samples/pingsampleapp/README.md) for build ins
 | `suspend generateMobilePayload()` | `Result<String>` | Generate a mobile payload for server-side authentication. |
 | `approvePushNotificationFromBanner(notification)` | `Unit` | Start the background foreground service to approve a banner push. |
 | `denyPushNotificationFromBanner(notification)` | `Unit` | Start the background foreground service to deny a banner push. |
+
+### `MobilePairingCollector`
+
+A DaVinci [`Collector`](../foundation/davinci-plugin) for the `MOBILE_PAIRING` node type,
+registered with the DaVinci engine automatically at startup via `CollectorInitializer`
+(no manual registration required). Drives the pairing flow from a DaVinci policy.
+
+| Function / Field | Type | Description |
+|---|---|---|
+| `pairingKey` | `String` | Pairing key supplied by the DaVinci server. Populated during `init`; passed to `PingOneMFA.pair(...)` in `collect()`. |
+| `key` | `String` | Field key sent by the server; also returned by `id()`. Used by DaVinci as the `formData` slot name (`"mobilePairing"` per the connector spec). |
+| `suspend collect()` | `Result<Unit>` | Runs pairing via `PingOneMFA.pair(pairingKey)` and stores the outcome under `payload()`. Must be called from a coroutine. |
+| `cancel(message?)` | `Unit` | Records a `USER_CANCELLED` outcome for `payload()`. Does not abort any in-flight `collect()` — the native SDK has no abort API — but a late-arriving native result is discarded so the cancellation payload is preserved. |
+| `payload()` | `JsonObject?` | Pairing outcome to be posted back to DaVinci under `formData[[id]]`. `null` until `collect()` or `cancel()` runs. |
+| `eventType()` | `String` | Returns `"action"` — matches the contract of self-submitting SDK Integrator connectors. |
 
 ### `PingOneMfaAccount`
 

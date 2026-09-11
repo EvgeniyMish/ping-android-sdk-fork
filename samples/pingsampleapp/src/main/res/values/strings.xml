@@ -62,6 +62,8 @@
     <string name="text_pingone_mfa_otp_subtitle">OTP for your paired accounts</string>
     <string name="text_pingone_mfa_payload_title">Mobile Payload</string>
     <string name="text_pingone_mfa_payload_subtitle">Generate Mobile Payload for authentication and registration</string>
+    <string name="text_pingone_mfa_davinci_pairing_title">DaVinci Pairing</string>
+    <string name="text_pingone_mfa_davinci_pairing_subtitle">Pair device via DaVinci flow</string>
 
     <!-- PingOne MFA screen titles -->
     <string name="text_pingone_mfa_screen_accounts_title">PingOne MFA</string>
@@ -74,7 +76,11 @@
     <string name="text_pingone_mfa_loading_accounts">Loading accounts…</string>
     <string name="text_pingone_mfa_loading_otp">Fetching OTP…</string>
     <string name="text_pingone_mfa_loading_payload">Fetching payload…</string>
-    <string name="text_pingone_mfa_pairing">Pairing…</string>
+    <string name="text_pingone_mfa_pairing">Pairing your device…</string>
+    <string name="text_pingone_mfa_davinci_pairing_cancel">Cancel</string>
+    <string name="text_pingone_mfa_davinci_pairing_succeeded">Pairing successful</string>
+    <string name="text_pingone_mfa_davinci_pairing_failed">Pairing failed</string>
+    <string name="text_pingone_mfa_davinci_pairing_continue">Continue</string>
 
     <!-- PingOne MFA OTP screen -->
     <string name="text_pingone_mfa_otp_no_passcode">No passcode available</string>

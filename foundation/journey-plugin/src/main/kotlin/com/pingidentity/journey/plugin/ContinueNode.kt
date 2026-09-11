@@ -11,7 +11,6 @@ import com.pingidentity.orchestrate.ContinueNode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import java.util.Locale
 
 /**
  * Extension property for Connector class to get a list of collectors.
@@ -69,20 +68,26 @@ val ContinueNode.stage: String
 /**
  * Extension property to retrieve the localized submit button text for this ContinueNode.
  *
- * This property intelligently derives the button text from multiple sources in order of priority:
+ * This property extracts locale-specific text from the `stage` field's JSON structure:
+ * ```json
+ * {"submitButtonText":{"en":"Submit","en-gb":"Submit","fr":"Soumettre"}}
+ * ```
  *
- * 1. **Localized value from stage JSON**: Extracts locale-specific text from the `stage` field
- *    ```json
- *    {"submitButtonText":{"en":"Submit","en-gb":"Submit","fr":"Soumettre"}}
- *    ```
- * The localization matching follows this priority:
- * - Exact locale match (e.g., "en_US" or "en-us")
- * - Language-only match (e.g., "en" for "en_US")
- * - First available value if no match found
+ * When the localization map has more than one entry, the device's ordered preferred-locale list
+ * is walked (the app's effective locale first, then the rest of the user's preferences in system
+ * order) and, for each candidate in turn:
+ * - Exact BCP-47 tag match (e.g. `"en-gb"`)
+ * - The same identifier with `-` replaced by `_` (e.g. `"en_gb"`)
+ * - Language-only match (e.g. `"en"` for `"en-GB"`)
+ *
+ * The device identifier is lowercased before lookup; the server's localization keys are matched
+ * as provided (lowercase keys expected). If no candidate matches, the first available value in
+ * the map is returned.
  *
  * @return The localized submit button text, or an empty string if not available
  *
  * @see getLocalizedValueFromStage
+ * @see resolveLocalizedValue
  * @see pageFooter
  */
 val ContinueNode.submitButtonText: String
@@ -103,14 +108,21 @@ val ContinueNode.submitButtonText: String
  * {"pageFooter":{"en":"© 2026 Company","en-gb":"© 2026 Company Ltd","fr":"© 2026 Société"}}
  * ```
  *
- * The localization matching follows this priority:
- * - Exact locale match (e.g., "en_GB" or "en-gb")
- * - Language-only match (e.g., "en" for "en_GB")
- * - First available value if no match found
+ * When the localization map has more than one entry, the device's ordered preferred-locale list
+ * is walked (the app's effective locale first, then the rest of the user's preferences in system
+ * order) and, for each candidate in turn:
+ * - Exact BCP-47 tag match (e.g. `"en-gb"`)
+ * - The same identifier with `-` replaced by `_` (e.g. `"en_gb"`)
+ * - Language-only match (e.g. `"en"` for `"en-GB"`)
+ *
+ * The device identifier is lowercased before lookup; the server's localization keys are matched
+ * as provided (lowercase keys expected). If no candidate matches, the first available value in
+ * the map is returned.
  *
  * @return The localized footer text, or an empty string if not available
  *
  * @see getLocalizedValueFromStage
+ * @see resolveLocalizedValue
  * @see submitButtonText
  */
 val ContinueNode.pageFooter: String
@@ -127,16 +139,9 @@ val ContinueNode.pageFooter: String
  * {"submitButtonText":{"en":"Submit","en-gb":"Submit","fr":"Soumettre"},"pageFooter":{"en":"Footer"}}
  * ```
  *
- * This method parses the JSON and returns the best matching localized value based on
- * the user's device locale ([Locale.getDefault]). The matching algorithm follows this priority:
- *
- * 1. **Single value optimization**: If only one localized value exists, returns it immediately
- * 2. **Exact locale match**: Tries to match the full locale identifier (e.g., "en_gb" or "en-gb")
- * 3. **Hyphen/underscore variants**: Attempts both underscore and hyphen formats (en_US vs en-us)
- * 4. **Language-only fallback**: Matches just the language code (e.g., "en" for "en_GB")
- * 5. **First available**: Returns the first value if no locale matches
- *
- * All locale comparisons are case-insensitive.
+ * This method parses the JSON, flattens the localization map for [key], and delegates the
+ * matching algorithm to [resolveLocalizedValue] using the candidate locales from
+ * [preferredLocales].
  *
  * @param key The key to look up in the stage JSON (e.g., "submitButtonText" or "pageFooter")
  * @return The localized string value, or `null` if:
@@ -147,6 +152,7 @@ val ContinueNode.pageFooter: String
  *
  * @see submitButtonText
  * @see pageFooter
+ * @see resolveLocalizedValue
  */
 private fun ContinueNode.getLocalizedValueFromStage(key: String): String? {
     return try {
@@ -161,31 +167,7 @@ private fun ContinueNode.getLocalizedValueFromStage(key: String): String? {
             k to (v.jsonPrimitive.content)
         }
 
-        // If there's only one value, return it
-        if (localizedMap.size == 1) {
-            return localizedMap.values.first()
-        }
-
-        // Start with the default locale
-        val defaultLocale = Locale.getDefault()
-
-        val identifier = defaultLocale.toString().lowercase()
-
-        // Try exact match first (e.g., "en_gb")
-        localizedMap[identifier]?.let { return it }
-
-        // Try with hyphen instead of underscore (e.g., "en-gb")
-        val hyphenIdentifier = identifier.replace("_", "-")
-        localizedMap[hyphenIdentifier]?.let { return it }
-
-        // Try language code only (e.g., "en" from "en_GB")
-        val languageCode = defaultLocale.language.lowercase()
-        if (languageCode.isNotEmpty()) {
-            localizedMap[languageCode]?.let { return it }
-        }
-
-        // If no match found, return the first available value
-        localizedMap.values.firstOrNull()
+        resolveLocalizedValue(localizedMap, preferredLocales())
     } catch (e: Exception) {
         null
     }

@@ -25,6 +25,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.pingidentity.orchestrate.SuccessNode
 import com.pingidentity.samples.pingsampleapp.PingSampleApplication
 import com.pingidentity.samples.pingsampleapp.authenticator.data.AuthenticatorViewModel
 import com.pingidentity.samples.pingsampleapp.authenticator.ui.AboutScreen
@@ -56,6 +58,7 @@ import com.pingidentity.samples.pingsampleapp.authenticator.util.NavigationAnima
 import com.pingidentity.samples.pingsampleapp.authgrant.DeviceAuthorizationGrantScreen
 import com.pingidentity.samples.pingsampleapp.config.Env
 import com.pingidentity.samples.pingsampleapp.davinci.DaVinci
+import com.pingidentity.samples.pingsampleapp.davinci.DaVinciViewModel
 import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagement
 import com.pingidentity.samples.pingsampleapp.devicemanagement.DeviceManagementViewModel
 import com.pingidentity.samples.pingsampleapp.devtools.DeviceInfo
@@ -113,6 +116,7 @@ object Route {
     const val ROUTE_PINGONE_OTP = "pingone_otp"
     const val ROUTE_PINGONE_PAYLOAD = "pingone_payload"
     const val ROUTE_PINGONE_QR_SCANNER = "pingone_qr_scanner"
+    const val ROUTE_PINGONE_DAVINCI_PAIRING = "pingone_davinci_pairing"
     const val DEVICE_AUTHORIZATION_GRANT = "device_authorization_grant"
     const val BACKCHANNEL_AUTH = "backchannel_auth"
     internal const val BACKCHANNEL_JOURNEY = "backchannel_journey?uri={uri}"
@@ -211,6 +215,9 @@ fun AppNavigation(
                 },
                 onPingOneQrScannerClick = {
                     navController.navigate(Route.ROUTE_PINGONE_QR_SCANNER)
+                },
+                onPingOneDaVinciPairingClick = {
+                    navController.navigate(Route.ROUTE_PINGONE_DAVINCI_PAIRING)
                 },
                 onDeviceAuthorizationGrantClick = {
                     navController.navigate(Route.DEVICE_AUTHORIZATION_GRANT)
@@ -604,6 +611,35 @@ fun AppNavigation(
             PingOneQrScannerScreen(
                 onBack = { navController.popBackStack() },
                 onPairComplete = { navController.popBackStack() }
+            )
+        }
+
+        composable(Route.ROUTE_PINGONE_DAVINCI_PAIRING) {
+            val daVinciViewModel = viewModel<DaVinciViewModel>()
+            val state by daVinciViewModel.state.collectAsState()
+            val loading by daVinciViewModel.loading.collectAsState()
+
+            // Set once the user taps Continue on the pairing card. The route then exits as
+            // soon as the submission completes — the server's response node is intentionally
+            // ignored, except SuccessNode which exits via DaVinci's own onSuccess callback.
+            var submitted by rememberSaveable { mutableStateOf(false) }
+            LaunchedEffect(state.counter, loading) {
+                if (submitted && !loading && state.error == null && state.node !is SuccessNode) {
+                    navController.popBackStack()
+                }
+            }
+
+            DaVinci(
+                state = state,
+                loading = loading,
+                onNodeUpdated = { daVinciViewModel.refresh() },
+                onNext = {
+                    submitted = true
+                    daVinciViewModel.next(it)
+                },
+                onStart = { daVinciViewModel.start() },
+                onSuccess = { navController.popBackStack() },
+                onBack = { navController.popBackStack() },
             )
         }
 

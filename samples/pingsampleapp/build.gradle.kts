@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.googleServices)
 }
 
+val recognizeEnabled = (findProperty("cloudsmithTokenRecognize") as? String).orEmpty().isNotBlank()
+
 android {
     namespace = "com.pingidentity.samples.pingsampleapp"
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -58,6 +60,12 @@ android {
             pickFirsts += "lib/*/libtool-file.so"
         }
     }
+
+    sourceSets {
+        named("main") {
+            kotlin.directories.add(if (recognizeEnabled) "src/recognizeEnabled/kotlin" else "src/recognizeDisabled/kotlin")
+        }
+    }
 }
 
 kotlin {
@@ -87,6 +95,7 @@ dependencies {
 
     implementation(project(":davinci"))
     implementation(project(":journey"))
+    if (recognizeEnabled) implementation(project(":recognize"))
     //Protect
     implementation(project(":protect"))
 

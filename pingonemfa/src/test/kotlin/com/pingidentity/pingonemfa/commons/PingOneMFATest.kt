@@ -20,6 +20,9 @@ import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -187,7 +190,7 @@ class PingOneMFATest {
             PingOne.setDeviceToken(any(), any(), any(), any())
         } answers {
             val callback = arg<PingOne.PingOneSetDeviceTokenCallback>(3)
-            callback.onComplete(Array(1) { null })
+            callback.onComplete(null)
         }
 
         val result = PingOneMFA.setDeviceToken("token")
@@ -290,12 +293,66 @@ class PingOneMFATest {
     }
 
     @Test
+    fun `pair late native success callback after cancellation is silently discarded`() = runTest {
+        // Regression guard for the cancellation race: the UI cancels the pairing job, and the
+        // native SDK callback can still arrive afterwards on its own thread. resume() on a
+        // cancelled CancellableContinuation must be the documented no-op (prompt cancellation
+        // guarantee), never a throw on the callback thread.
+        lateinit var captured: PingOne.PingOneSDKPairingCallback
+        every {
+            PingOne.pair(any(), any(), any())
+        } answers {
+            // Hand the callback out without invoking it — pair() is now suspended on it.
+            captured = arg<PingOne.PingOneSDKPairingCallback>(2)
+        }
+
+        val job = launch { PingOneMFA.pair("PAIR-KEY") }
+        runCurrent() // coroutine has entered pair() and suspended on the captured callback
+
+        job.cancel() // user cancelled while pairing is still in flight
+
+        // Native callback arrives late, after cancellation — must be silently discarded.
+        val late = runCatching { captured.onComplete(mockPairingInfo, null) }
+        assertTrue(
+            late.isSuccess,
+            "late success callback after cancellation must be discarded, but threw: ${late.exceptionOrNull()}",
+        )
+
+        advanceUntilIdle()
+        assertTrue(job.isCancelled)
+    }
+
+    @Test
+    fun `pair late native error callback after cancellation is silently discarded`() = runTest {
+        lateinit var captured: PingOne.PingOneSDKPairingCallback
+        every {
+            PingOne.pair(any(), any(), any())
+        } answers {
+            captured = arg<PingOne.PingOneSDKPairingCallback>(2)
+        }
+
+        val job = launch { PingOneMFA.pair("PAIR-KEY") }
+        runCurrent()
+
+        job.cancel()
+
+        val late = runCatching { captured.onComplete(null, PingOneSDKError(10005, "late failure")) }
+        assertTrue(
+            late.isSuccess,
+            "late error callback after cancellation must be discarded, but threw: ${late.exceptionOrNull()}",
+        )
+
+        advanceUntilIdle()
+        assertTrue(job.isCancelled)
+    }
+
+    @Test
     fun `getAccounts returns success when deviceInfo is present`() = runTest {
         every {
             PingOne.getInfo(any(), any())
         } answers {
             val callback = arg<PingOne.PingOneGetInfoCallback>(1)
-            callback.onComplete(mockDeviceInfo, Array(1) { null })
+            callback.onComplete(mockDeviceInfo, emptyArray<PingOneSDKError>())
         }
 
         val result = PingOneMFA.getDeviceInfo()

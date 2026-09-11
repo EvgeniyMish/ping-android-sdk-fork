@@ -15,12 +15,17 @@ pluginManagement {
     }
 }
 
+val cloudsmithTokenRecognize: String = if (extra.has("cloudsmithTokenRecognize")) extra["cloudsmithTokenRecognize"] as String else ""
+val cloudsmithTokenAesWrap: String = if (extra.has("cloudsmithTokenAesWrap")) extra["cloudsmithTokenAesWrap"] as String else ""
+
 dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
         //mavenLocal()
         maven(url = "https://central.sonatype.com/repository/maven-snapshots/")
+        maven(url = "https://dl.cloudsmith.io/$cloudsmithTokenRecognize/keyless/partners/maven/")
+        maven(url = "https://dl.cloudsmith.io/$cloudsmithTokenAesWrap/keyless/aeswrap/maven/")
     }
 }
 
@@ -53,6 +58,7 @@ include(":mfa:commons")
 include(":mfa:oath")
 include(":mfa:push")
 include(":protect")
+if (cloudsmithTokenRecognize.isNotBlank()) include(":recognize")
 include(":external-idp")
 //include(":verify")
 include(":recaptcha-enterprise")

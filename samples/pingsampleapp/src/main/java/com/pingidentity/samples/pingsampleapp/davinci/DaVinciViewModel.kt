@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.pingidentity.oidc.module.VERIFICATION_URI_COMPLETE
 import com.pingidentity.orchestrate.ContinueNode
 import com.pingidentity.samples.pingsampleapp.config.daVinci
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -35,12 +36,21 @@ class DaVinciViewModel(
             true
         }
         viewModelScope.launch {
-            val next = current.next()
-            state.update {
-                it.copy(node = next, counter = it.counter + 1)
-            }
-            loading.update {
-                false
+            try {
+                val next = current.next()
+                state.update {
+                    it.copy(node = next, counter = it.counter + 1)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                state.update {
+                    it.copy(node = null, error = e.message ?: "An unexpected error occurred")
+                }
+            } finally {
+                loading.update {
+                    false
+                }
             }
         }
     }
@@ -56,17 +66,26 @@ class DaVinciViewModel(
             true
         }
         viewModelScope.launch {
-            val next = if (!verificationUri.isNullOrBlank()) {
-                daVinci?.start {
-                    VERIFICATION_URI_COMPLETE to verificationUri.toUri()
-                }
-            } else { daVinci?.start() }
+            try {
+                val next = if (!verificationUri.isNullOrBlank()) {
+                    daVinci?.start {
+                        VERIFICATION_URI_COMPLETE to verificationUri.toUri()
+                    }
+                } else { daVinci?.start() }
 
-            state.update {
-                it.copy(node = next, counter = it.counter + 1)
-            }
-            loading.update {
-                false
+                state.update {
+                    it.copy(node = next, counter = it.counter + 1)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                state.update {
+                    it.copy(node = null, error = e.message ?: "An unexpected error occurred")
+                }
+            } finally {
+                loading.update {
+                    false
+                }
             }
         }
     }

@@ -5,6 +5,7 @@
 
 #### Fixed
 - Fixed the browser redirect URI scheme manifest placeholder to apply only to debug builds, allowing release consumers to provide their own value [SDKS-5296]
+- Fixed Journey `submitButtonText`/`pageFooter` to resolve against the device's ordered preferred-locale list instead of a single locale, matching the iOS SDK [SDKS-5310]
 
 ## [2.1.0]
 

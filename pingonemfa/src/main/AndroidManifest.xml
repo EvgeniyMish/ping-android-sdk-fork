@@ -6,7 +6,8 @@
   ~ of the MIT license. See the LICENSE file for details.
   -->
 
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING"/>
 
@@ -15,5 +16,15 @@
             android:name="com.pingidentity.pingonemfa.push.PushApprovalService"
             android:exported="false"
             android:foregroundServiceType="remoteMessaging" />
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="com.pingidentity.pingonemfa.davinci.CollectorInitializer"
+                android:value="androidx.startup" />
+        </provider>
     </application>
 </manifest>

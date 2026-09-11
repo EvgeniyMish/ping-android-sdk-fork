@@ -83,6 +83,10 @@ jobs:
             "deviceLogs": ${{ vars.BS_DEVICE_LOGS }},
             "networkLogs": ${{ vars.BS_NETWORK_LOGS }},
             "video": ${{ vars.BS_VIDEO }}, 
+            "shards": {
+              "numberOfShards": 2, 
+              "deviceSelection": "all"
+            },
             "project": "journey-tests"
           }
           EOF

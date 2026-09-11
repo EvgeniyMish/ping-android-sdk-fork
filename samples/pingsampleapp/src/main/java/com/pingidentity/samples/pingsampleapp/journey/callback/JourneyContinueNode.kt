@@ -170,6 +170,8 @@ fun JourneyContinueNode(
                     DeviceSigningVerifierCallback(vm, true, onNext)
                     showNext = false
                 }
+
+                else -> if (RecognizeCallbacks(it, onNext)) showNext = false
             }
         }
 

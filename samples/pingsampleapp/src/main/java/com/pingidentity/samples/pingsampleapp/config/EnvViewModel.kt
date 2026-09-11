@@ -136,6 +136,7 @@ internal fun loadAssetConfigs(): AssetConfigs {
             val root = Json.parseToJsonElement(
                 context.assets.open(fileName).bufferedReader().use { it.readText() }
             ).jsonObject
+
             val isDaVinci = root.contains("journey").not()
             val oidc = root["oidc"]?.jsonObject ?: return@runCatching
             val journeyObj = root["journey"]?.jsonObject

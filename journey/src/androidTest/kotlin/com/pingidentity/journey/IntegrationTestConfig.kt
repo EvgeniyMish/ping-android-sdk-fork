@@ -35,6 +35,10 @@ object IntegrationTestConfig {
         private set
     var discoveryEndPoint: String = ""
         private set
+    var backchannelClientId: String = ""
+        private set
+    var backchannelClientSecret: String = ""
+        private set
 
 
     init {
@@ -53,6 +57,8 @@ object IntegrationTestConfig {
             recaptchaSiteKey = properties.getProperty("recaptchaSiteKey", "")
             cookieName = properties.getProperty("cookieName", "")
             discoveryEndPoint = properties.getProperty("discoveryEndPoint", "")
+            backchannelClientId = properties.getProperty("backchannelClientId", "")
+            backchannelClientSecret = properties.getProperty("backchannelClientSecret", "")
 
             inputStream.close()
         } catch (e: IOException) {

@@ -17,10 +17,12 @@ android {
 }
 dependencies {
     implementation(project(":foundation:android"))
+    implementation(project(":foundation:davinci-plugin"))
     implementation(project(":foundation:logger"))
     implementation(libs.com.pingidentity.pingonemfa)
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.startup.runtime)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.google.gson.lib)
     implementation(libs.kotlinx.serialization.json)

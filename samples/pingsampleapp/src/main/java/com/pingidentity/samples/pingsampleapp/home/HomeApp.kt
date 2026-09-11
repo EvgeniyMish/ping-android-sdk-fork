@@ -110,6 +110,7 @@ fun HomeApp(
     onPingOneOTPClick : () -> Unit,
     onPingOnePayloadClick : () -> Unit,
     onPingOneQrScannerClick : () -> Unit,
+    onPingOneDaVinciPairingClick : () -> Unit,
     onDeviceAuthorizationGrantClick : () -> Unit,
     onBackchannelAuthClick : () -> Unit,
 ) {
@@ -355,6 +356,13 @@ fun HomeApp(
                 )
 
                 IconRowItem(
+                    icon = Icons.Default.Key,
+                    title = stringResource(R.string.text_pingone_mfa_davinci_pairing_title),
+                    subtitle = stringResource(R.string.text_pingone_mfa_davinci_pairing_subtitle),
+                    onClick = onPingOneDaVinciPairingClick
+                )
+
+                IconRowItem(
                     icon = Icons.Default.AccountBox,
                     title = stringResource(R.string.text_pingone_mfa_accounts_title),
                     subtitle = stringResource(R.string.text_pingone_mfa_accounts_subtitle),
@@ -563,6 +571,7 @@ fun PreviewHomeApp() {
         onPingOneOTPClick = {},
         onPingOnePayloadClick = {},
         onPingOneQrScannerClick = {},
+        onPingOneDaVinciPairingClick = {},
         onDeviceAuthorizationGrantClick = {},
         onBackchannelAuthClick = {},
     )

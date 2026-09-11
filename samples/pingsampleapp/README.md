@@ -36,6 +36,10 @@ The Ping Sample App is a consolidated sample that brings together functionality 
 
 ### 🔒 PingOne MFA
 - **QR Code Registration**: Scan a QR code to pair the device with PingOne MFA
+- **DaVinci Pairing**: Pair the device by running a DaVinci flow that drives the
+  `MobilePairingCollector` from the `pingonemfa` module — no manual QR scan or pairing
+  key entry required. Configured through a dedicated "PingOne MFA DaVinci" card in the
+  Configuration screen, independent from the standard DaVinci config.
 - **MFA Accounts**: View all paired PingOne MFA accounts
 - **One-Time Passcode**: Display the current OTP code with a live countdown
 - **Mobile Payload**: Generate a mobile payload for server-side authentication flows
@@ -95,6 +99,14 @@ Direct integration of the `pingonemfa` module for PingOne push and OTP:
 - **UI Screens**: PingOneQrScannerScreen, PingOneMFAAccountsScreen, PingOneOTPScreen, PingOnePayloadScreen, PingOnePushNotificationScreen
 - **Notification**: PingOneNotificationHelper, PingOneNotificationActionReceiver, PingOnePushNotificationActivity
 - **Store**: PushNotificationStore — single-slot in-process store for the active push notification
+- **DaVinci Pairing**:
+  - `PingOneMfaDaVinciViewModel` drives the DaVinci flow against the dedicated
+    `pingOneMfaDaVinci` global (never the standard `daVinci`)
+  - `pingonemfa/davinci/collector/MobilePairing.kt` renders the pairing UI states
+    (in-progress with cancel, success, failure with server error details) driven by the
+    `MobilePairingCollector` from the `pingonemfa` SDK module
+  - Configured via a dedicated "PingOne MFA DaVinci" card in the Configuration screen —
+    see [PingOne MFA DaVinci Setup](#pingone-mfa-davinci-setup)
 
 #### 5. **Device Management**
 Comprehensive device registration and management:
@@ -142,6 +154,76 @@ The PingOne MFA module (`pingonemfa`) requires additional one-time configuration
 2. The FCM token is registered with PingOne automatically via `PingOneMFA.setDeviceToken(token)` whenever Firebase delivers a new token
 3. See the [pingonemfa README](../pingonemfa/README.md) for the full list of supported regions and API reference
 4. See the [PingOne MFA documentation](https://docs.pingidentity.com/pingone/strong_authentication_mfa/p1_strong_authentication_configure_mobile_applications.html) for server-side configuration and integration details
+
+### PingOne MFA DaVinci Setup
+
+The DaVinci pairing flow uses a **dedicated DaVinci client** so its configuration is
+completely independent from the standard DaVinci flow. Any change to the standard
+DaVinci config in the Configuration screen has no effect on the pairing flow, and
+vice versa.
+
+- **Preset asset file** — configs placed under `src/main/assets/` and flagged with
+  `"pingOneMfa": true` at the top level are auto-loaded as presets in the
+  "PingOne MFA DaVinci" card. They are excluded from the DaVinci / Web / DeviceAuth
+  preset lists so they never pollute other cards. Example:
+
+  ```json
+  {
+    "pingOneMfa": true,
+    "oidc": {
+      "clientId": "…",
+      "discoveryEndpoint": "https://…/.well-known/openid-configuration",
+      "scopes": ["openid"],
+      "redirectUri": "app://oauth2redirect"
+    }
+  }
+  ```
+
+- **Custom configs** — add, edit, duplicate, and delete configs from the
+  "PingOne MFA DaVinci" card. Custom configs and the applied selection persist in
+  DataStore under the `pmfa_` key prefix, independent from the `dv_` keys used by
+  the standard DaVinci.
+- **Out-of-the-box behaviour** — on a fresh install with no user-applied config, the
+  first asset preset is auto-selected so pairing works immediately from the Home
+  screen's "DaVinci Pairing" entry.
+- **Runtime instance** — the applied config builds the `pingOneMfaDaVinci` global in
+  `EnvViewModel`, consumed only by `PingOneMfaDaVinciViewModel`. The standard
+  `daVinci` global is never overwritten.
+### PingOne Recognize integration
+
+The Recognize integration is optional because its Keyless SDK dependencies are hosted in protected Cloudsmith repositories.
+
+#### Required Cloudsmith tokens
+
+Add both tokens to a local Gradle properties file using these exact property names:
+
+| Gradle property | Repository | Used for |
+|---|---|---|
+| `cloudsmithTokenRecognize` | `keyless/partners` | PingOne Recognize / Keyless Mobile SDK |
+| `cloudsmithTokenAesWrap` | `keyless/aeswrap` | AES wrap dependencies used by the SDK |
+
+- **Recommended:** `~/.gradle/gradle.properties` — applies locally without changing the repository
+- **Alternative:** the repository's `gradle.properties` — keep this file local and never commit it
+
+```properties
+cloudsmithTokenRecognize=<your-recognize-cloudsmith-token>
+cloudsmithTokenAesWrap=<your-aeswrap-cloudsmith-token>
+```
+
+Do not place either token in source code, commit them, or share them in logs. The build reads both properties from Gradle properties and uses them to configure the protected Maven repositories in `settings.gradle.kts`.
+
+When `cloudsmithTokenRecognize` is present and non-blank, Gradle enables the `:recognize` module and the sample compiles its real Recognize callback integration. The AES wrap repository is configured separately through `cloudsmithTokenAesWrap`; provide that token whenever the dependency graph requires AES wrap artifacts.
+
+```bash
+./gradlew :samples:pingsampleapp:assembleDebug
+```
+
+#### Run without Recognize
+
+If `cloudsmithTokenRecognize` is missing or blank, the sample remains buildable without the protected Recognize dependency. The build excludes the `:recognize` module and selects the local Recognize stub, so Recognize callbacks are safely skipped rather than preventing the rest of the sample app from running.
+
+This means you can work on the sample without Recognize Cloudsmith access, then add the required tokens locally whenever you need to exercise the full integration. After changing either token, sync or rerun Gradle so the correct repository and dependency graph are selected.
+
 ## Implementation Highlights
 
 ### ViewModel Initialization
@@ -242,6 +324,7 @@ fun logoutAll() {
 
 **PINGONE MFA**
 - QR Code Registration
+- DaVinci Pairing
 - MFA Accounts
 - One-Time Passcode
 - Mobile Payload

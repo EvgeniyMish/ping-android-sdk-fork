@@ -156,7 +156,7 @@ class PushNotificationTest {
             title = "t",
             message = "m"
             )
-        assertTrue(push.notificationObject.numberMatchingOptions == null || push.notificationObject.numberMatchingOptions.isEmpty())
+        assertTrue((push.notificationObject.numberMatchingOptions == null) || push.notificationObject.numberMatchingOptions!!.isEmpty())
     }
 
     @Test
